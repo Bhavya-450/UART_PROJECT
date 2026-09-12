@@ -1,5 +1,8 @@
 # UART_PROJECT
-## INTRODUCTION 
+## INTRODUCTION
+
+![INTRODUCTION](docs/img1.jpg)
+
 Verilog implementation of a UART transmitter and receiver with independent testbenches for simulation
 
 UART stands for Universal Asynchronous Receiver/Transmitter. It’s not a communication protocol like SPI and I2C, but a physical circuit in a microcontroller, or a stand-alone IC.

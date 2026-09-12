@@ -70,6 +70,14 @@ The UART that is going to transmit data receives the data from a data bus. The d
 
 The receiving UART reads the data packet bit by bit at its Rx pin. The receiving UART then converts the data back into parallel form and removes the start bit, parity bit, and stop bits. Finally, the receiving UART transfers the data packet in parallel to the data bus on the receiving end:
 
+## TRANSMITTER :
+
+![TRANSMITTER](doc/img4.jpg)
+
+
+
+
+
 
 
 

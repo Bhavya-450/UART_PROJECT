@@ -97,18 +97,25 @@ Idle(1) → Start(0) → D0 → D1 → D2 → D3 → D4 → D5 → D6 → D7 →
 
 ## RECEIVER :
 
-
+![RECEIVER](doc/img6.png)
 
 The UART receiver accepts serial data through the rx input and converts it back into an 8-bit parallel value on data_out. UART communication normally keeps the serial line at logic 1 when no data is being sent. The receiver stays in the IDLE state while rx is high and waits for the line to go low.
+
 When rx becomes 0, the receiver assumes that a start bit may have arrived. It does not immediately trust this transition, because it could be caused by noise. Instead, it waits for half of one UART-bit period and checks rx again in the middle of the expected start bit. If the line is still low, the start bit is valid and the receiver moves to the DATA state. If the line has returned high, it treats it as a false start and goes back to IDLE.
+
 With a 1 MHz system clock and 9600 baud rate, one UART bit takes approximately 104 clock cycles. The receiver samples every bit after waiting for 104 clocks. Sampling close to the middle of a bit gives the receiver the best chance of reading the correct value even if there is slight timing difference between transmitter and receiver.
+
 In the DATA state, the receiver reads eight bits from the rx line. UART sends the least-significant bit first, so the first sampled bit is stored in data_reg[0], the next in data_reg[1], and this continues until data_reg[7]. The bit_index register tracks which data bit is currently being received. It is three bits wide because it only needs to count from 0 to 7.
+
+
 After receiving all eight data bits, the receiver enters the PARITY state when parity is enabled. In this state, it samples the parity bit and compares it with the expected parity value calculated from the received data. For even parity, the total number of logic 1 values in the eight data bits plus the parity bit must be even. If the received parity bit is different from the expected value, parity_error becomes 1.
+
 The receiver then enters the STOP state. A valid UART stop bit must be logic 1. If rx is high when the stop bit is sampled, the receiver copies data_reg into data_out and pulses data_valid high for one clock cycle. This pulse indicates that a complete valid UART frame has been received. If the stop bit is low, the receiver sets frame_error to 1, meaning that the frame format is incorrect.
+
 The busy output becomes high after a valid start bit is detected and remains high until the receiver has processed the stop bit. Once the frame is complete, the receiver returns to the IDLE state and waits for the next UART start bit.
 
 
-7:05 PM
+
 
 
 

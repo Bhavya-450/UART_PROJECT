@@ -70,9 +70,9 @@ The UART that is going to transmit data receives the data from a data bus. The d
 
 The receiving UART reads the data packet bit by bit at its Rx pin. The receiving UART then converts the data back into parallel form and removes the start bit, parity bit, and stop bits. Finally, the receiving UART transfers the data packet in parallel to the data bus on the receiving end:
 
-## TRANSMITTER :
+## UART TRANSMITTER :
 
-![TRANSMITTER](doc/img5.png)
+![UART TRANSMITTER](doc/img5.png)
 
 This module sends one UART frame whenever tx_start becomes high while the transmitter is idle. A UART TX line stays at logic 1 when nothing is being transmitted, so after reset tx is set to 1, busy is 0, and the FSM enters the IDLE state.
 
@@ -95,9 +95,9 @@ Finally, in the STOP state, tx is driven back to 1 for one bit period. Once this
 
 Idle(1) → Start(0) → D0 → D1 → D2 → D3 → D4 → D5 → D6 → D7 → Parity → Stop(1)
 
-## RECEIVER :
+## UART RECEIVER :
 
-![RECEIVER](doc/img6.png)
+![UART RECEIVER](doc/img6.png)
 
 The UART receiver accepts serial data through the rx input and converts it back into an 8-bit parallel value on data_out. UART communication normally keeps the serial line at logic 1 when no data is being sent. The receiver stays in the IDLE state while rx is high and waits for the line to go low.
 

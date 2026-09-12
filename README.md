@@ -74,6 +74,29 @@ The receiving UART reads the data packet bit by bit at its Rx pin. The receiving
 
 ![TRANSMITTER](doc/img5.png)
 
+This module sends one UART frame whenever tx_start becomes high while the transmitter is idle. A UART TX line stays at logic 1 when nothing is being transmitted, so after reset tx is set to 1, busy is 0, and the FSM enters the IDLE state.
+
+The parameters define the system clock frequency and UART baud rate. For example, with a 50 MHz clock and 115200 baud rate, CLKS_PER_BIT is approximately 434. That means every UART bit—start bit, each data bit, parity bit, and stop bit—is held for 434 system-clock cycles.
+
+The FSM has five states: IDLE, START, DATA, PARITY, and STOP. 
+The state register stores the current state. clk_count measures how long the current UART bit has been on the tx output. bit_index selects which data bit is currently being sent, and it is correctly three bits wide because it only needs values from 0 to 7.
+
+In the IDLE state, the transmitter waits for tx_start. When tx_start is asserted, data_in is copied into data_reg. This is important because data_in may change while transmission is in progress, but the transmitted byte must remain unchanged. At the same time, the parity bit is calculated. For even parity, ^data_in is used; this makes the total number of 1s in the data plus parity bit even. For odd parity, the XOR result is inverted using ~(^data_in).
+
+After accepting the byte, the FSM immediately drives tx low. This is the UART start bit, and the FSM moves to START. The line remains low until clk_count reaches CLKS_PER_BIT - 1, meaning one full UART bit period has passed.
+
+The FSM then enters DATA and sends the data bits from least-significant bit to most-significant bit, which is the UART convention. It first sends data_reg[0], then data_reg[1], continuing until data_reg[7].
+The line:
+## tx <= data_reg[bit_index + 3'd1];
+selects the next data bit. It is only executed while bit_index is below 7. When bit_index reaches 7, bit 7 has already been placed on tx and held for one baud period, so the FSM moves on instead of accessing an invalid bit.
+
+After sending all eight data bits, the FSM either sends the calculated parity bit in the PARITY state, or skips directly to STOP if PARITY_ENABLE is 0. The parity bit is also held for exactly one bit period.
+Finally, in the STOP state, tx is driven back to 1 for one bit period. Once this stop-bit duration finishes, busy returns to 0 and the FSM returns to IDLE, ready to transmit the next byte.
+
+Idle(1) → Start(0) → D0 → D1 → D2 → D3 → D4 → D5 → D6 → D7 → Parity → Stop(1)
+
+
+
 
 
 

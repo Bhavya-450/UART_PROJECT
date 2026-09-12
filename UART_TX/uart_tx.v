@@ -1,103 +1,133 @@
-/ UART Transmitter - 8 data bits, no parity, 1 stop bit
-// Sends one byte LSB-first when tx_start is pulsed.
+
+`timescale 1ns/1ps
+
 module uart_tx #(
-    parameter CLK_FREQ  = 50_000_000,   // system clock (Hz)
-    parameter BAUD_RATE = 115200        // baud rate
+    parameter integer CLK_FREQ      = 1_000_000,
+    parameter integer BAUD_RATE     = 9_600,
+    parameter         PARITY_ENABLE = 1'b1,
+    parameter         ODD_PARITY    = 1'b0   // 0 = even, 1 = odd
 )(
     input  wire       clk,
-    input  wire       rst_n,        // active-low reset
-    input  wire       tx_start,     // pulse HIGH for 1 clock to send
-    input  wire [7:0] tx_data,      // byte to transmit
-    output reg        tx,           // serial output line
-    output reg        tx_busy,      // HIGH while transmitting
-    output reg        tx_done       // 1-clock pulse when finished
+    input  wire       rst_n,
+    input  wire [7:0] data_in,
+    input  wire       tx_start,
+
+    output reg        tx,
+    output reg        busy
 );
 
-    // Number of clock cycles per bit
-    localparam BAUD_DIV = CLK_FREQ / BAUD_RATE;
+    localparam integer CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;
 
-    // State encoding
-    localparam IDLE  = 2'b00;
-    localparam START = 2'b01;
-    localparam DATA  = 2'b10;
-    localparam STOP  = 2'b11;
+    localparam [2:0]
+        IDLE   = 3'd0,
+        START  = 3'd1,
+        DATA   = 3'd2,
+        PARITY = 3'd3,
+        STOP   = 3'd4;
 
-    reg [1:0]  state;
-    reg [15:0] baud_cnt;     // counts clocks within one bit
-    reg [2:0]  bit_idx;      // 0..7 which data bit we are sending
-    reg [7:0]  data_reg;     // latched copy of tx_data
+    reg [2:0]  state;
+    reg [7:0]  data_reg;
+    reg        parity_bit;
+  reg [2:0]  bit_index;
+    reg [31:0] clk_count;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state    <= IDLE;
-            tx       <= 1'b1;       // idle line = HIGH
-            tx_busy  <= 1'b0;
-            tx_done  <= 1'b0;
-            baud_cnt <= 0;
-            bit_idx  <= 0;
-            data_reg <= 0;
+            state     <= IDLE;
+            tx        <= 1'b1;   // UART idle level
+            busy      <= 1'b0;
+            data_reg  <= 8'd0;
+            parity_bit <= 1'b0;
+            bit_index <= 3'd0;
+            clk_count <= 32'd0;
         end
         else begin
-            tx_done <= 1'b0;        // default: no done pulse
-
             case (state)
 
-            //----------------------------------------------
-            IDLE: begin
-                tx      <= 1'b1;    // keep line HIGH
-                tx_busy <= 1'b0;
-                baud_cnt <= 0;
-                bit_idx  <= 0;
+                IDLE: begin
+                    tx        <= 1'b1;
+                    busy      <= 1'b0;
+                    clk_count <= 0;
 
-                if (tx_start) begin
-                    data_reg <= tx_data;   // latch input data
-                    tx_busy  <= 1'b1;
-                    state    <= START;
-                end
-            end
+                    if (tx_start) begin
+                        data_reg <= data_in;
 
-            //----------------------------------------------
-            START: begin
-                tx <= 1'b0;                // pull line LOW
-                if (baud_cnt == BAUD_DIV-1) begin
-                    baud_cnt <= 0;
-                    state    <= DATA;
-                end else begin
-                    baud_cnt <= baud_cnt + 1;
-                end
-            end
+                        // Even parity: XOR of all 9 bits is 0
+                        // Odd parity:  XOR of all 9 bits is 1
+                        if (ODD_PARITY)
+                            parity_bit <= ~(^data_in);
+                        else
+                            parity_bit <=  ^data_in;
 
-            //----------------------------------------------
-            DATA: begin
-                tx <= data_reg[bit_idx];   // LSB first
-                if (baud_cnt == BAUD_DIV-1) begin
-                    baud_cnt <= 0;
-                    if (bit_idx == 7) begin
-                        bit_idx <= 0;
-                        state   <= STOP;
-                    end else begin
-                        bit_idx <= bit_idx + 1;
+                        tx        <= 1'b0;  // Start bit
+                        busy      <= 1'b1;
+                        state     <= START;
+                        clk_count <= 0;
                     end
-                end else begin
-                    baud_cnt <= baud_cnt + 1;
                 end
-            end
 
-            //----------------------------------------------
-            STOP: begin
-                tx <= 1'b1;                // stop bit = HIGH
-                if (baud_cnt == BAUD_DIV-1) begin
-                    baud_cnt <= 0;
-                    tx_done  <= 1'b1;
-                    tx_busy  <= 1'b0;
-                    state    <= IDLE;
-                end else begin
-                    baud_cnt <= baud_cnt + 1;
+                START: begin
+                    if (clk_count == CLKS_PER_BIT - 1) begin
+                        clk_count <= 0;
+                        bit_index <= 0;
+                        tx        <= data_reg[0]; // Send LSB first
+                        state     <= DATA;
+                    end
+                    else
+                        clk_count <= clk_count + 1;
                 end
-            end
 
-            default: state <= IDLE;
+                DATA: begin
+                    if (clk_count == CLKS_PER_BIT - 1) begin
+                        clk_count <= 0;
+
+                      if (bit_index == 3'd7) begin
+                            if (PARITY_ENABLE) begin
+                                tx    <= parity_bit;
+                                state <= PARITY;
+                            end
+                            else begin
+                                tx    <= 1'b1; // Stop bit
+                                state <= STOP;
+                            end
+                        end
+                        else begin
+                            bit_index <= bit_index + 1'b1;
+                          tx        <= data_reg[bit_index + 3'b1];
+                        end
+                    end
+                    else
+                        clk_count <= clk_count + 1;
+                end
+
+                PARITY: begin
+                    if (clk_count == CLKS_PER_BIT - 1) begin
+                        clk_count <= 0;
+                        tx        <= 1'b1; // Stop bit
+                        state     <= STOP;
+                    end
+                    else
+                        clk_count <= clk_count + 1;
+                end
+
+                STOP: begin
+                    if (clk_count == CLKS_PER_BIT - 1) begin
+                        clk_count <= 0;
+                        tx        <= 1'b1;
+                        busy      <= 1'b0;
+                        state     <= IDLE;
+                    end
+                    else
+                        clk_count <= clk_count + 1;
+                end
+
+                default: begin
+                    state <= IDLE;
+                    tx    <= 1'b1;
+                    busy  <= 1'b0;
+                end
             endcase
         end
     end
+
 endmodule

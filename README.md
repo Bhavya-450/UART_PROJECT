@@ -1,7 +1,7 @@
 # UART_PROJECT
 ## INTRODUCTION
 
-![INTRODUCTION](docs/img1.jpg)
+![INTRODUCTION](doc/img1.jpg)
 
 Verilog implementation of a UART transmitter and receiver with independent testbenches for simulation
 

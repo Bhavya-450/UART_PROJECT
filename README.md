@@ -72,7 +72,7 @@ The receiving UART reads the data packet bit by bit at its Rx pin. The receiving
 
 ## TRANSMITTER :
 
-![TRANSMITTER](doc/img5.jpg)
+![TRANSMITTER](doc/img5.png)
 
 
 

@@ -28,7 +28,7 @@ module uart_tx_tb;
 
     // 50 MHz clock: period = 20 ns
   initial clk = 0;
-    always #5 clk = ~clk;
+    always #500 clk = ~clk;
 
     // Task to send one UART byte
     task send_byte;

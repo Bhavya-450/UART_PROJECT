@@ -25,7 +25,7 @@ module uart_top #(
     output wire       frame_error
 );
 
-    uart_tx #(
+    uart_tx_fsm #(
         .CLK_FREQ      (CLK_FREQ),
         .BAUD_RATE     (BAUD_RATE),
         .PARITY_ENABLE (PARITY_ENABLE),
@@ -39,7 +39,7 @@ module uart_top #(
         .busy     (tx_busy)
     );
 
-    uart_rx #(
+    uart_rx_fsm #(
         .CLK_FREQ      (CLK_FREQ),
         .BAUD_RATE     (BAUD_RATE),
         .PARITY_ENABLE (PARITY_ENABLE),

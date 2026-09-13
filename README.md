@@ -114,6 +114,22 @@ The receiver then enters the STOP state. A valid UART stop bit must be logic 1. 
 
 The busy output becomes high after a valid start bit is detected and remains high until the receiver has processed the stop bit. Once the frame is complete, the receiver returns to the IDLE state and waits for the next UART start bit.
 
+## Final Output of UART :
+
+![Final Output of UART](doc/img7.png)
+
+## CONCLUSION :
+The UART communication system was successfully designed and verified using Verilog RTL.
+
+The project implements:
+- UART transmitter (TX) with configurable clock frequency and baud rate.
+- UART receiver (RX) with data reception, parity checking, and frame error detection.
+- UART top module integrating the transmitter and receiver in a loopback configuration.
+- Separate testbenches for TX, RX, and the complete UART system.
+
+This project provided practical experience in RTL design, FSM-based control logic, UART timing, serial data transmission and reception, module integration, and simulation-based verification.
+
+
 
 
 
